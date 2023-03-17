@@ -29,6 +29,10 @@ const atendimentoReports = database.define('atendimentoreports', {
     terminoOperacao: Sequelize.DATE,
     obs: Sequelize.STRING,
     statusRelatorio: Sequelize.INTEGER,
+    created_at: Sequelize.DATE,
+    updated_at: Sequelize.DATE
+},{
+    createdAt: 'created_at',
+    updatedAt: 'updated_at'
 })
-
 module.exports = atendimentoReports;

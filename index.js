@@ -1,5 +1,7 @@
 const venom = require('venom-bot');
 const { ControlsLayer } = require('venom-bot/dist/api/layers/controls.layer');
+const atendimentoReports = require('./bdfiles/atendimentoreports')
+const moment = require('moment');
 
 const conversations = {};
 
@@ -43,7 +45,7 @@ async function handleConversation(client, message, conversation) {
 
     switch (conversation.step) {
       case 0:
-        conversation.data.idMaquina = message.body;
+        conversation.data.idEquip = message.body;
         conversation.step = 1;
         await client.sendText(userId, 'Qual o endereço do atendimento');
         break;
@@ -56,9 +58,9 @@ async function handleConversation(client, message, conversation) {
 
       case 2:
         if (message.body === '1') {
-          conversation.data.tipoChamado = "Emergencial"
+          conversation.data.tipoAtendimento = "Emergencial"
         } else if (message.body === '2') {
-          conversation.data.tipoChamado = "Programado"
+          conversation.data.tipoAtendimento = "Programado"
         }
         conversation.step = 3;
         await client.sendText(userId, 'Qual o dia e horário da abertura do chamado? Exemplo: 03/04/2023 17:45');
@@ -87,19 +89,22 @@ async function handleConversation(client, message, conversation) {
         break;
 
       case 6:
-        conversation.data.chegadaGmg = message.body;
+        let chegadaGmgDigitada = message.body
+        let chegadaGmgFormatada = moment(chegadaGmgDigitada, 'DD/MM/YYYY HH:mm').format('YYYY-MM-DD HH:mm:ss')
+        conversation.data.chegadaGmg = chegadaGmgFormatada;
         conversation.step = 7;
-        await client.sendText(userId, 'E o status do equipamento? Digite apenas o número correspondende \n\n 1 -  Stand By \n 2 - Aguardando COD \n 3 - Gerador Ligado');
+        await client.sendText(userId, 'E o status do equipamento? Digite apenas o número correspondente \n\n 1 -  Stand By \n 2 - Aguardando COD \n 3 - Gerador Ligado');
         break;
 
       case 7:
-        if (message.body === '1') {
+        /* if (message.body === '1') {
           conversation.data.status = "Stand by"
         } else if (message.body === '2') {
           conversation.data.status = "Aguardando COD"
         } else if (message.body === '3') {
-          conversation.data.statys = "Gerador Ligado"
-        }
+          conversation.data.status = "Gerador Ligado"
+        } */
+        conversation.data.status = message.body
         conversation.step = 8;
         await client.sendText(userId, 'Sobre o cabeamento transportado: Qual secção do condutor? Digite apenas o número correspondente \n\n 1 -  70mm \n 2 - 95mm \n 3 - 120mm \n 4 - 240mm');
         break;
@@ -127,7 +132,7 @@ async function handleConversation(client, message, conversation) {
 
       case 10:
         conversation.data.lancesNeutroTransportado = message.body;
-        if (conversation.data.status === "Stand by" || conversation.data.status === "Aguardando COD") {
+        if (conversation.data.status === "1" || conversation.data.status === "2") {
           conversation.step = 17
           await client.sendText(userId, 'Alguma Observação?');
           break
@@ -161,13 +166,17 @@ async function handleConversation(client, message, conversation) {
         break;
 
       case 15:
-        conversation.data.inicioOperacao = message.body;
+        let inicioOperacaoDigitada = message.body
+        let inicioOperacaoFormatada = moment(inicioOperacaoDigitada, 'DD/MM/YYYY HH:mm').format('YYYY-MM-DD HH:mm:ss')
+        conversation.data.inicioOperacao = inicioOperacaoFormatada
         conversation.step = 16;
         await client.sendText(userId, 'Qual a data e horário do término da Operação?');
         break;
 
       case 16:
-        conversation.data.terminoOperacao = message.body;
+        let terminoOperacaoDigitada = message.body
+        let terminoOperacaoFormatada = moment(terminoOperacaoDigitada, 'DD/MM/YYYY HH:mm').format('YYYY-MM-DD HH:mm:ss')
+        conversation.data.terminoOperacao = terminoOperacaoFormatada;
         conversation.step = 17;
         await client.sendText(userId, 'Alguma Observação?');
         break;
@@ -211,6 +220,28 @@ async function finishConversation(client, message, conversation) {
   if (conversation.type === 'atendimento') {
     report = `Nome: ${conversation.data.name}\nIdade: ${conversation.data.age}`;
     console.log(conversation)
+    const saveReport = await atendimentoReports.create({
+      idEquip: conversation.data.idEquip,
+      endereco: conversation.data.endereco,
+      tipoAtendimento: conversation.data.tipoAtendimento,
+      caminhao: conversation.data.caminhao,
+      horaChamado: conversation.data.horaChamado,
+      tipoConexao: conversation.data.tipoConexao,
+      seccaoCondutorTransportado: conversation.data.seccaoCondutorTransportado,
+      lancesPorFaseTransportado: conversation.data.lancesPorFaseTransportado,
+      lancesNeutroTransportado: conversation.data.lancesNeutroTransportado,
+      horimetroInicial: conversation.data.horimetroInicial,
+      horimetroFinal: conversation.data.horimetroFinal,
+      kwhInicial: conversation.data.kwhInicial,
+      kwhFinal: conversation.data.kwhFinal,
+      chegadaGmg: conversation.data.chegadaGmg,
+      inicioOperacao: conversation.data.inicioOperacao,
+      terminoOperacao: conversation.data.terminoOperacao,
+      obs: conversation.data.obs,
+      statusRelatorio: conversation.data.status,
+     /*  created_at: moment().format('YYYY-MM-DD HH:mm:ss'),
+      updated_at: moment().format('YYYY-MM-DD HH:mm:ss'), */
+    })
   } else if (conversation.type === 'entrevista2') {
     report = `Profissão: ${conversation.data.profession}\nCidade: ${conversation.data.city}`;
   } else {
