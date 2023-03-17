@@ -14,6 +14,7 @@ venom
 
 function start(client) {
   client.onMessage(async (message) => {
+
     if (message.isGroupMsg === false) {
       const userId = message.from;
       const command = message.body.toLowerCase();
@@ -21,6 +22,13 @@ function start(client) {
       if (command === 'inicio') {
         await workflowEvents.inicio(client, message);
         return;
+      }
+
+      let whiteList = ['5511972083773@c.us']
+
+      if (!whiteList.includes(userId)) {
+        client.sendText(userId, 'Desculpe, você não tem autorização para utilizar essas funções');
+        return
       }
 
       const conversation = conversations[userId];
@@ -239,8 +247,8 @@ async function finishConversation(client, message, conversation) {
       terminoOperacao: conversation.data.terminoOperacao,
       obs: conversation.data.obs,
       statusRelatorio: conversation.data.status,
-     /*  created_at: moment().format('YYYY-MM-DD HH:mm:ss'),
-      updated_at: moment().format('YYYY-MM-DD HH:mm:ss'), */
+      /*  created_at: moment().format('YYYY-MM-DD HH:mm:ss'),
+       updated_at: moment().format('YYYY-MM-DD HH:mm:ss'), */
     })
   } else if (conversation.type === 'entrevista2') {
     report = `Profissão: ${conversation.data.profession}\nCidade: ${conversation.data.city}`;
