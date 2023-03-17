@@ -43,14 +43,133 @@ async function handleConversation(client, message, conversation) {
 
     switch (conversation.step) {
       case 0:
-        conversation.data.name = message.body;
+        conversation.data.idMaquina = message.body;
         conversation.step = 1;
-        await client.sendText(userId, 'Qual é a sua idade?');
+        await client.sendText(userId, 'Qual o endereço do atendimento');
         break;
 
       case 1:
-        conversation.data.age = message.body;
+        conversation.data.endereco = message.body;
         conversation.step = 2;
+        await client.sendText(userId, 'Qual o tipo do chamado? Digite apenas o número \n\n 1 - Emergencial \n 2 - Programado');
+        break;
+
+      case 2:
+        if (message.body === '1') {
+          conversation.data.tipoChamado = "Emergencial"
+        } else if (message.body === '2') {
+          conversation.data.tipoChamado = "Programado"
+        }
+        conversation.step = 3;
+        await client.sendText(userId, 'Qual o dia e horário da abertura do chamado? Exemplo: 03/04/2023 17:45');
+        break;
+
+      case 3:
+        conversation.data.horaChamado = message.body;
+        conversation.step = 4;
+        await client.sendText(userId, 'Qual o tipo de conexão? Digite apenas o número correspondende \n\n 1 - Aérea \n 2 -  Subterrânea? ');
+        break;
+
+      case 4:
+        if(message.body === '1'){
+          conversation.data.tipoConexao = "Aerea"
+        }else if(message.body === '2'){
+          conversation.data.tipoConexao = "Subterrânea"
+        }
+        conversation.step = 5;
+        await client.sendText(userId, 'Qual o caminhão usado na operação? ');
+        break;
+
+      case 5:
+        conversation.data.caminhao = message.body;
+        conversation.step = 6;
+        await client.sendText(userId, 'Qual a data e horário da chegada do GMG ao local? ');
+        break;
+
+      case 6:
+        conversation.data.chegadaGmg = message.body;
+        conversation.step = 7;
+        await client.sendText(userId, 'E o status do equipamento? Digite apenas o número correspondende \n\n 1 -  Stand By \n 2 - Aguardando COD \n 3 - Gerador Ligado');
+        break;
+
+      case 7:
+        if(message.body === '1'){
+          conversation.data.status = "Stand by"
+        }else if (message.body === '2'){
+          conversation.data.status = "Aguardando COD"
+        }else if (message.body === '3'){
+          conversation.data.statys = "Gerador Ligado"
+        }
+        conversation.step = 8;
+        await client.sendText(userId, 'Sobre o cabeamento transportado: Qual secção do condutor? Digite apenas o número correspondente \n\n 1 -  70mm \n 2 - 95mm \n 3 - 120mm \n 4 - 240mm');
+        break;
+
+
+      case 8:
+        if(message.body === '1'){
+          conversation.data.seccaoCondutorTransportado = "70"
+        } else if(message.body === '2'){
+          conversation.data.seccaoCondutorTransportado = "95"
+        }else if(message.body === '3'){
+          conversation.data.seccaoCondutorTransportado = "120"
+        }else if(message.body === '4'){
+          conversation.data.seccaoCondutorTransportado = "240"
+        }
+        conversation.step = 9;
+        await client.sendText(userId, 'Sobre o cabeamento transportado: Quantos lances por fase? 1, 2, 3, 4, 5, 6');
+        break;
+
+      case 9:
+        conversation.data.lancesPorFaseTransportado = message.body;
+        conversation.step = 10;
+        await client.sendText(userId, 'Sobre o cabeamento transportado: Quantos lances neutro? 1, 2, 3, 4, 5, 6');
+        break;
+
+      case 10:
+        conversation.data.lancesNeutroTransportado = message.body;
+        conversation.step = 11;
+        await client.sendText(userId, 'Qual o horimetro inicial?');
+        break;
+
+      case 11:
+        conversation.data.horimetroInicial = message.body;
+        conversation.step = 12;
+        await client.sendText(userId, 'Qual o horímetro final?');
+        break;
+
+      case 12:
+        conversation.data.horimetroFinal = message.body;
+        conversation.step = 13;
+        await client.sendText(userId, 'Qual o Kwh inicial?');
+        break;
+
+      case 13:
+        conversation.data.kwhInicial = message.body;
+        conversation.step = 14;
+        await client.sendText(userId, 'Qual o Kwh Final?');
+        break;
+
+      case 14:
+        conversation.data.kwhFinal = message.body;
+        conversation.step = 15;
+        await client.sendText(userId, 'Qual a data e horário do inicio da Operação?');
+        break;
+
+      case 15:
+        conversation.data.inicioOperacao = message.body;
+        conversation.step = 16;
+        await client.sendText(userId, 'Qual a data e horário do término da Operação?');
+        break;
+
+      case 16:
+        conversation.data.terminoOperacao = message.body;
+        conversation.step = 17;
+        await client.sendText(userId, 'Alguma Observação?');
+        break;
+
+      case 17:
+        conversation.data.obs = message.body;
+        conversation.step = 18;
         await finishConversation(client, message, conversation);
         break;
 
@@ -122,7 +241,7 @@ const workflowEvents = {
       };
     }
 
-    await client.sendText(userId, 'Qual é o seu nome?');
+    await client.sendText(userId, 'Vamos lá, qual o número da máquina que faremos o relatório?');
   },
 
   entrevista2: async (client, message) => {
