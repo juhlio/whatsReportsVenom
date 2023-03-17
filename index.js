@@ -67,13 +67,13 @@ async function handleConversation(client, message, conversation) {
       case 3:
         conversation.data.horaChamado = message.body;
         conversation.step = 4;
-        await client.sendText(userId, 'Qual o tipo de conexão? Digite apenas o número correspondende \n\n 1 - Aérea \n 2 -  Subterrânea? ');
+        await client.sendText(userId, 'Qual o tipo de conexão? Digite apenas o número correspondente \n\n 1 - Aérea \n 2 -  Subterrânea');
         break;
 
       case 4:
-        if(message.body === '1'){
+        if (message.body === '1') {
           conversation.data.tipoConexao = "Aerea"
-        }else if(message.body === '2'){
+        } else if (message.body === '2') {
           conversation.data.tipoConexao = "Subterrânea"
         }
         conversation.step = 5;
@@ -83,7 +83,7 @@ async function handleConversation(client, message, conversation) {
       case 5:
         conversation.data.caminhao = message.body;
         conversation.step = 6;
-        await client.sendText(userId, 'Qual a data e horário da chegada do GMG ao local? ');
+        await client.sendText(userId, 'Qual a data e horário da chegada do GMG ao local? Exemplo: 03/04/2023 13:21');
         break;
 
       case 6:
@@ -93,11 +93,11 @@ async function handleConversation(client, message, conversation) {
         break;
 
       case 7:
-        if(message.body === '1'){
+        if (message.body === '1') {
           conversation.data.status = "Stand by"
-        }else if (message.body === '2'){
+        } else if (message.body === '2') {
           conversation.data.status = "Aguardando COD"
-        }else if (message.body === '3'){
+        } else if (message.body === '3') {
           conversation.data.statys = "Gerador Ligado"
         }
         conversation.step = 8;
@@ -106,13 +106,13 @@ async function handleConversation(client, message, conversation) {
 
 
       case 8:
-        if(message.body === '1'){
+        if (message.body === '1') {
           conversation.data.seccaoCondutorTransportado = "70"
-        } else if(message.body === '2'){
+        } else if (message.body === '2') {
           conversation.data.seccaoCondutorTransportado = "95"
-        }else if(message.body === '3'){
+        } else if (message.body === '3') {
           conversation.data.seccaoCondutorTransportado = "120"
-        }else if(message.body === '4'){
+        } else if (message.body === '4') {
           conversation.data.seccaoCondutorTransportado = "240"
         }
         conversation.step = 9;
@@ -127,6 +127,11 @@ async function handleConversation(client, message, conversation) {
 
       case 10:
         conversation.data.lancesNeutroTransportado = message.body;
+        if (conversation.data.status === "Stand by" || conversation.data.status === "Aguardando COD") {
+          conversation.step = 17
+          await client.sendText(userId, 'Alguma Observação?');
+          break
+        }
         conversation.step = 11;
         await client.sendText(userId, 'Qual o horimetro inicial?');
         break;
