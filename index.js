@@ -1,6 +1,8 @@
 const venom = require('venom-bot');
+const { Op } = require('sequelize');
 const { ControlsLayer } = require('venom-bot/dist/api/layers/controls.layer');
 const atendimentoReports = require('./bdfiles/atendimentoreports')
+const gensets = require('./bdfiles/gensets')
 const moment = require('moment');
 
 const conversations = {};
@@ -24,7 +26,7 @@ function start(client) {
         return;
       }
 
-      let whiteList = ['5511972083773@c.us']
+      let whiteList = ['5511972083773@c.us', '5511963004849@c.us']
 
       if (!whiteList.includes(userId)) {
         client.sendText(userId, 'Desculpe, você não tem autorização para utilizar essas funções');
@@ -105,13 +107,6 @@ async function handleConversation(client, message, conversation) {
         break;
 
       case 7:
-        /* if (message.body === '1') {
-          conversation.data.status = "Stand by"
-        } else if (message.body === '2') {
-          conversation.data.status = "Aguardando COD"
-        } else if (message.body === '3') {
-          conversation.data.status = "Gerador Ligado"
-        } */
         conversation.data.status = message.body
         conversation.step = 8;
         await client.sendText(userId, 'Sobre o cabeamento transportado: Qual secção do condutor? Digite apenas o número correspondente \n\n 1 -  70mm \n 2 - 95mm \n 3 - 120mm \n 4 - 240mm');
@@ -151,8 +146,8 @@ async function handleConversation(client, message, conversation) {
 
       case 11:
         conversation.data.horimetroInicial = message.body;
-        conversation.step = 12;
-        await client.sendText(userId, 'Qual o horímetro final?');
+        conversation.step = 14;
+        await client.sendText(userId, 'Qual o Kwh inicial?');
         break;
 
       case 12:
@@ -163,8 +158,8 @@ async function handleConversation(client, message, conversation) {
 
       case 13:
         conversation.data.kwhInicial = message.body;
-        conversation.step = 14;
-        await client.sendText(userId, 'Qual o Kwh Final?');
+        conversation.step = 15;
+        await client.sendText(userId, 'Qual a data e horário do inicio da Operação?');
         break;
 
       case 14:
@@ -177,8 +172,8 @@ async function handleConversation(client, message, conversation) {
         let inicioOperacaoDigitada = message.body
         let inicioOperacaoFormatada = moment(inicioOperacaoDigitada, 'DD/MM/YYYY HH:mm').format('YYYY-MM-DD HH:mm:ss')
         conversation.data.inicioOperacao = inicioOperacaoFormatada
-        conversation.step = 16;
-        await client.sendText(userId, 'Qual a data e horário do término da Operação?');
+        conversation.step = 17;
+        await client.sendText(userId, 'Alguma Observação?');
         break;
 
       case 16:
@@ -199,17 +194,29 @@ async function handleConversation(client, message, conversation) {
         await client.sendText(userId, 'Desculpe, ocorreu um erro na conversa. Por favor, tente novamente.');
         delete conversations[userId];
     }
-  } else if (conversation.type === 'entrevista2') {
+  } else if (conversation.type === 'finalizar') {
     switch (conversation.step) {
       case 0:
-        conversation.data.profession = message.body;
+        conversation.data.idAtendimento = message.body;
         conversation.step = 1;
-        await client.sendText(userId, 'Em que cidade você trabalha?');
+        await client.sendText(userId, 'Qual o horímetro final');
         break;
 
       case 1:
-        conversation.data.city = message.body;
+        conversation.data.horimetroFinal = message.body;
         conversation.step = 2;
+        await client.sendText(userId, 'Qual o Kwh final?');
+        break;
+
+      case 2:
+        conversation.data.kwhFinal = message.body;
+        conversation.step = 3;
+        await client.sendText(userId, 'Alguma Observação?');
+        break;
+
+      case 3:
+        conversation.data.obs = message.body;
+        conversation.step = 4;
         await finishConversation(client, message, conversation);
         break;
 
@@ -247,10 +254,20 @@ async function finishConversation(client, message, conversation) {
       terminoOperacao: conversation.data.terminoOperacao,
       obs: conversation.data.obs,
       statusRelatorio: conversation.data.status,
-      /*  created_at: moment().format('YYYY-MM-DD HH:mm:ss'),
-       updated_at: moment().format('YYYY-MM-DD HH:mm:ss'), */
     })
-  } else if (conversation.type === 'entrevista2') {
+  } else if (conversation.type === 'finalizar') {
+    console.log(conversation)
+    const closeReport = atendimentoReports.update({
+      horimentoFinal: conversation.data.horimentroFinal,
+      kwhFinal: conversation.data.kwhFInal,
+      obs: conversation.data.obs,
+      statusRelatorio: 4
+    }, {
+      where: {
+        id: conversation.data.idAtendimento
+      }
+    })
+
     report = `Profissão: ${conversation.data.profession}\nCidade: ${conversation.data.city}`;
   } else {
     await client.sendText(userId, 'Desculpe, ocorreu um erro na conversa. Por favor, tente novamente.');
@@ -269,7 +286,7 @@ async function finishConversation(client, message, conversation) {
 
 const workflowEvents = {
   ajuda: async (client, message) => {
-    await client.sendText(message.from, 'Digite a palavra Correspondente.\nAqui estão os comandos disponíveis:\n\n1. Atendimento\n\n\n\n\Digite Inicio a qualquer momento para voltar a este menu');
+    await client.sendText(message.from, 'Digite a palavra Correspondente.\nAqui estão os comandos disponíveis:\n\n1 - Atendimento\n2- Finalizar\n\n\n\n\Digite Inicio a qualquer momento para voltar a este menu');
   },
   exemplo: async (client, message) => {
     await client.sendText(message.from, 'Este é um exemplo de resposta para o comando "exemplo".');
@@ -285,20 +302,43 @@ const workflowEvents = {
       };
     }
 
-    await client.sendText(userId, 'Vamos lá, qual o número da máquina que faremos o relatório?');
+    let geradores = await gensets.findAll({
+      attributes: ['id', 'fabricante', 'numeroSerie'],
+      where: {
+        idCliente: 775,
+      },
+    })
+    let listageradores = ''
+    geradores.forEach((gerador) => {
+      listageradores += `*${gerador.id}* - ${gerador.fabricante} | ${gerador.numeroSerie}\n`;
+    });
+    console.log(geradores)
+    await client.sendText(userId, `Vamos lá, qual o número da máquina que faremos o relatório?\n\nDigite Apenas o Número Correspondente:\n\n${listageradores}`);
   },
 
-  entrevista2: async (client, message) => {
+  finalizar: async (client, message) => {
     const userId = message.from;
     if (!conversations[userId]) {
       conversations[userId] = {
-        type: 'entrevista2',
+        type: 'finalizar',
         step: 0,
         data: {},
       };
     }
+    let atendimentosAbertos = await atendimentoReports.findAll({
+      where: {
+        statusRelatorio: {
+          [Op.ne]: 4
+        }
+      }
+    })
+    let listaAtendimentos = ''
+    atendimentosAbertos.forEach((atendimento) => {
+      listaAtendimentos += `*${atendimento.id}* - ${atendimento.endereco}\n`;
+    });
 
-    await client.sendText(userId, 'Qual é a sua profissão?');
+
+    await client.sendText(userId, `Qual atendimento você quer finalizar?\n\nDigite apenas o número correspondente\n${listaAtendimentos}`);
   },
 
   inicio: async (client, message) => {
@@ -306,7 +346,7 @@ const workflowEvents = {
     if (conversations[userId]) {
       delete conversations[userId];
     }
-    await client.sendText(userId, 'A conversa foi reiniciada. Digite a palavra Correspondente.\n\nAqui estão os comandos disponíveis:\n1. Atendimento\n\n\n\n\Digite Inicio a qualquer momento para voltar a este menu');
+    await client.sendText(userId, 'A conversa foi reiniciada. Digite a palavra Correspondente.\n\nAqui estão os comandos disponíveis:\n1 -  Atendimento\n2 - Finalizar\n\n\n\n\Digite Inicio a qualquer momento para voltar a este menu');
   },
 
 
